@@ -17,6 +17,12 @@
                     <el-input type="text" v-model="ruleForm.password" autocomplete="off" minlength="6"
                               maxlength="20"></el-input>
                 </el-form-item>
+
+                <el-form-item prop="passwords" class="item-form" v-if="model==='register'">
+                    <label>重复密码</label>
+                    <el-input type="text" v-model="ruleForm.passwords" autocomplete="off" minlength="6"
+                              maxlength="20"></el-input>
+                </el-form-item>
                 <el-form-item prop="code" class="item-form">
                     <label>验证码</label>
                     <el-row :gutter="10">
@@ -38,51 +44,67 @@
     </div>
 </template>
 <script>
+    import {stripscript, validateEmail, validatePass, validateVCode} from '@/utils/validate';
+
     export default {
         name: "index",
         data() {
 
-            var validateUsername = (rule, value, callback) => {
+            const validateUsername = (rule, value, callback) => {
                 // eslint-disable-next-line no-useless-escape
-                let reg = /^([a-zA-Z]|[0-9])(\w|\-)+@[a-zA-Z0-9]+\.([a-zA-Z]{2,4})$/;
-
                 if (value === '') {
                     callback(new Error('请输入邮箱'));
-                } else if (!reg.test(value)) {
+                } else if (validateEmail(value)) {
                     callback(new Error('邮箱格式有误'))
                 } else {
                     callback();
                 }
             };
-            var validatePassword = (rule, value, callback) => {
-                let reg = /^(?!\D+$)(?![^a-zA-Z]+$)\S{6,20}$/;
+            const validatePassword = (rule, value, callback) => {
+                this.ruleForm.password = stripscript(value);
+                value = this.ruleForm.password;
                 if (value === '') {
                     callback(new Error('请输入密码'));
-                } else if (!reg.test(value)) {
+                } else if (validatePass(value)) {
                     callback(new Error('密码为6至20位字母+数字'));
                 } else {
                     callback();
                 }
             };
-            var validateCode = (rule, value, callback) => {
-                let reg = /^[a-z0-9]{6}$/;
+
+            const validatePasswords = (rule, value, callback) => {
+                this.ruleForm.passwords = stripscript(value);
+                value = this.ruleForm.passwords;
+                if (value === '') {
+                    callback(new Error('请再次输入密码'));
+                } else if (value !== this.ruleForm.password) {
+                    callback(new Error('重复密码不正确'));
+                } else {
+                    callback();
+                }
+            };
+            const validateCode = (rule, value, callback) => {
+                this.ruleForm.code = stripscript(value);
+                value = this.ruleForm.code;
                 if (value === '') {
                     return callback(new Error('验证码不能为空'));
-                }else if(!reg.test(value)){
+                } else if (validateVCode(value)) {
                     return callback(new Error('验证码格式不正确'));
-                }else {
+                } else {
                     callback();
 
                 }
             };
             return {
                 menuTab: [
-                    {txt: '登录', current: true},
-                    {txt: '注册', current: false}
+                    {txt: '登录', current: true, type: 'login'},
+                    {txt: '注册', current: false, type: 'register'}
                 ],
+                model: 'login',
                 ruleForm: {
                     username: '',
                     password: '',
+                    passwords: '',
                     code: ''
                 },
                 rules: {
@@ -91,6 +113,9 @@
                     ],
                     password: [
                         {validator: validatePassword, trigger: 'blur'}
+                    ],
+                    passwords: [
+                        {validator: validatePasswords, trigger: 'blur'}
                     ],
                     code: [
                         {validator: validateCode, trigger: 'blur'}
@@ -108,6 +133,8 @@
                     elem.current = false
                 });
                 data.current = true
+
+                this.model = data.type
             },
             submitForm(formName) {
                 this.$refs[formName].validate((valid) => {
