@@ -72,7 +72,8 @@
                             type="danger"
                             @click="submitForm('ruleForm')"
                             class="login-btn block"
-                    >提交
+                            :disabled="loginButtonStatus"
+                    >{{model == 'login'?'登录':'注册'}}
                     </el-button
                     >
                 </el-form-item>
@@ -93,7 +94,7 @@
 
     export default {
         name: "index",
-        setup(props, {refs}) {
+        setup(props, {refs, root}) {
             const validateUsername = (rule, value, callback) => {
                 // eslint-disable-next-line no-useless-escape
                 if (value === "") {
@@ -150,6 +151,8 @@
 
             const model = ref('login');
 
+            const loginButtonStatus = ref(true);
+
             const ruleForm = reactive({
                 username: "",
                 password: "",
@@ -176,8 +179,20 @@
                     });
 
             const getSms = (() => {
+                if (ruleForm.username == '') {
+                    root.$message.error('邮箱不能为空！！');
+                    return false
+                }
+                if (validateEmail(ruleForm.username)){
+                    root.$message.error('邮箱格式不正确,请重新输入!!');
+                    return false
+                }
                 GetSms({
                     username: ruleForm.username
+                }).then(response => {
+
+                }).catch(error=>{
+
                 });
             });
 
@@ -204,7 +219,8 @@
                 submitForm,
                 rules,
                 ruleForm,
-                getSms
+                getSms,
+                loginButtonStatus
             }
         }
     };
