@@ -30,7 +30,7 @@
                 <el-form-item prop="password" class="item-form">
                     <label>密码</label>
                     <el-input
-                            type="text"
+                            type="password"
                             v-model="ruleForm.password"
                             autocomplete="off"
                             minlength="6"
@@ -45,7 +45,7 @@
                 >
                     <label>重复密码</label>
                     <el-input
-                            type="text"
+                            type="password"
                             v-model="ruleForm.passwords"
                             autocomplete="off"
                             minlength="6"
@@ -63,7 +63,10 @@
                             ></el-input>
                         </el-col>
                         <el-col :span="9">
-                            <el-button type="success" class="block" @click="getSms()">获取验证码</el-button>
+                            <el-button type="success" class="block" @click="getSms()"
+                                       :disabled="codeButtonStatus.status">
+                                {{codeButtonStatus.text}}
+                            </el-button>
                         </el-col>
                     </el-row>
                 </el-form-item>
@@ -90,7 +93,7 @@
     } from '@/utils/validate';
 
     import {onMounted, reactive, ref} from '@vue/composition-api'
-    import {GetSms} from '@/api/login';
+    import {GetSms, Register} from '@/api/login';
 
     export default {
         name: "index",
@@ -153,6 +156,13 @@
 
             const loginButtonStatus = ref(true);
 
+            const codeButtonStatus = reactive({
+                status: false,
+                text: "获取验证码"
+            });
+
+            const timer = ref(null);
+
             const ruleForm = reactive({
                 username: "",
                 password: "",
@@ -176,31 +186,82 @@
                         data.current = true;
 
                         model.value = data.type;
+
+                        //refs[ruleForm].resetFields();
+
+                        codeButtonStatus.text = "发送验证码"
                     });
+
 
             const getSms = (() => {
                 if (ruleForm.username == '') {
                     root.$message.error('邮箱不能为空！！');
                     return false
                 }
-                if (validateEmail(ruleForm.username)){
+                if (validateEmail(ruleForm.username)) {
                     root.$message.error('邮箱格式不正确,请重新输入!!');
                     return false
                 }
-                GetSms({
-                    username: ruleForm.username
-                }).then(response => {
+                let requestData = {
+                    username: ruleForm.username,
+                    module: model.value
+                };
 
-                }).catch(error=>{
+                codeButtonStatus.status = true;
+                codeButtonStatus.text = '发送中';
 
-                });
+                    GetSms(requestData).then(response => {
+                        let data = response.data;
+                        root.$message({
+                            message: data.message,
+                            type: 'success'
+                        });
+
+                        loginButtonStatus.value = false
+                        //调定时器，开始倒计时
+                        countDown(60);
+                    }).catch(error => {
+                        console.log(error)
+
+                    });
             });
+
+            const countDown = ((number) => {
+                timer.value = setInterval(() => {
+                    number--;
+                    if (timer.value === 0) {
+                        clearInterval(timer.value);
+                        codeButtonStatus.text = '再次发送';
+                        codeButtonStatus.status = false
+                    } else {
+                        codeButtonStatus.text = `倒计时${number}秒`;
+                    }
+                }, 1000);
+
+
+            });
+
 
             const submitForm =
                 (formName => {
                     refs[formName].validate(valid => {
                         if (valid) {
-                            alert("submit!");
+                            let requestData = {
+                                username: ruleForm.username,
+                                password: ruleForm.password,
+                                passwords: ruleForm.passwords,
+                                code: ruleForm.code,
+                                module: model.value
+                            };
+                            Register(requestData).then(response => {
+                                let data = response.data;
+                                root.$message({
+                                    message: data.message,
+                                    type: 'success'
+                                });
+                            }).catch(error => {
+
+                            })
                         } else {
                             console.log("error submit!!");
                             return false;
@@ -220,7 +281,8 @@
                 rules,
                 ruleForm,
                 getSms,
-                loginButtonStatus
+                loginButtonStatus,
+                codeButtonStatus
             }
         }
     };

@@ -57,11 +57,11 @@ module.exports = {
         hot: true, // 开启热加载
         hotOnly: false,
         proxy: {
-            '/devApi': {
-                target: "http://www.web-jshtml.cn/productapi",
+            "/devApi": {
+                target: "http://www.web-jshtml.cn/productapi/token", //API服务器的地址
                 changeOrigin: true,
                 pathRewrite: {
-                    '^/devApi': ''
+                    "^/devApi": ''
                 }
             }
         },
