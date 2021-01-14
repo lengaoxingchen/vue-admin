@@ -15,7 +15,7 @@
                     :model="ruleForm"
                     status-icon
                     :rules="rules"
-                    ref="ruleForm"
+                    ref="loginForm"
                     class="login-form"
                     size="medium"
             >
@@ -57,7 +57,7 @@
                     <el-row :gutter="10">
                         <el-col :span="15">
                             <el-input
-                                    v-model.number="ruleForm.code"
+                                    v-model="ruleForm.code"
                                     minlength="6"
                                     maxlength="6"
                             ></el-input>
@@ -73,7 +73,7 @@
                 <el-form-item>
                     <el-button
                             type="danger"
-                            @click="submitForm('ruleForm')"
+                            @click="submitForm('loginForm')"
                             class="login-btn block"
                             :disabled="loginButtonStatus"
                     >{{model == 'login'?'登录':'注册'}}
@@ -93,7 +93,7 @@
     } from '@/utils/validate';
 
     import {onMounted, reactive, ref} from '@vue/composition-api'
-    import {GetSms, Register} from '@/api/login';
+    import {GetSms, Register,Login} from '@/api/login';
 
     export default {
         name: "index",
@@ -187,8 +187,7 @@
 
                         model.value = data.type;
 
-                        //refs[ruleForm].resetFields();
-
+                        refs.loginForm.resetFields();
                         codeButtonStatus.text = "发送验证码"
                     });
 
@@ -210,23 +209,31 @@
                 codeButtonStatus.status = true;
                 codeButtonStatus.text = '发送中';
 
-                    GetSms(requestData).then(response => {
-                        let data = response.data;
-                        root.$message({
-                            message: data.message,
-                            type: 'success'
-                        });
-
-                        loginButtonStatus.value = false
-                        //调定时器，开始倒计时
-                        countDown(60);
-                    }).catch(error => {
-                        console.log(error)
-
+                GetSms(requestData).then(response => {
+                    let data = response.data;
+                    root.$message({
+                        message: data.message,
+                        type: 'success'
                     });
+
+                    loginButtonStatus.value = false
+                    //调定时器，开始倒计时
+                    countDown(60);
+                }).catch(error => {
+                    console.log(error)
+
+                });
             });
+            /**
+             * 倒计时
+             */
 
             const countDown = ((number) => {
+                //判断定时器是否存在
+                if (timer.value) {
+                    clearInterval(timer)
+                }
+
                 timer.value = setInterval(() => {
                     number--;
                     if (timer.value === 0) {
@@ -238,36 +245,77 @@
                     }
                 }, 1000);
 
+            });
 
+            /**
+             * 清除倒计时
+             * @type {clearCountDown}
+             */
+            const clearCountDown = (() => {
+                //还原验证码按钮默认状态
+                codeButtonStatus.status = false;
+                codeButtonStatus.text = "获取验证码";
+                //清除倒计时
+                clearInterval(timer.value)
             });
 
 
             const submitForm =
                 (formName => {
-                    refs[formName].validate(valid => {
-                        if (valid) {
-                            let requestData = {
-                                username: ruleForm.username,
-                                password: ruleForm.password,
-                                passwords: ruleForm.passwords,
-                                code: ruleForm.code,
-                                module: model.value
-                            };
-                            Register(requestData).then(response => {
-                                let data = response.data;
-                                root.$message({
-                                    message: data.message,
-                                    type: 'success'
-                                });
-                            }).catch(error => {
 
-                            })
+                    refs[formName].validate(valid => {
+                        //表单验证通过
+                        if (valid) {
+                            model.value === 'login'?login():register();
                         } else {
                             console.log("error submit!!");
                             return false;
                         }
                     });
                 });
+
+            /**
+             * 登录
+             */
+
+            const login = (() => {
+                let requestData = {
+                    username: ruleForm.username,
+                    password: ruleForm.password,
+                    code: ruleForm.code,
+                    module: model.value
+                };
+                Login(requestData).then(response=>{
+                }).catch(error=>{
+
+                })
+            });
+            /**
+             * 注册
+             */
+            const register = (() => {
+                let requestData = {
+                    username: ruleForm.username,
+                    password: ruleForm.password,
+                    passwords: ruleForm.passwords,
+                    code: ruleForm.code,
+                    module: model.value
+                };
+                Register(requestData).then(response => {
+                    let data = response.data;
+                    root.$message({
+                        message: data.message,
+                        type: 'success'
+                    });
+
+                    //模拟注册成功
+                    toggleMenu(menuTab[0]);
+                    clearCountDown();
+                    // eslint-disable-next-line no-unused-vars
+                }).catch(error => {
+
+                })
+            });
 
             onMounted(() => {
 
@@ -282,7 +330,7 @@
                 ruleForm,
                 getSms,
                 loginButtonStatus,
-                codeButtonStatus
+                codeButtonStatus,
             }
         }
     };
