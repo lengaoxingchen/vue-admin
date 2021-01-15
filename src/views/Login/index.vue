@@ -94,6 +94,7 @@
 
     import {onMounted, reactive, ref} from '@vue/composition-api'
     import {GetSms, Register,Login} from '@/api/login';
+    import sha1 from 'js-sha1';
 
     export default {
         name: "index",
@@ -188,10 +189,18 @@
                         model.value = data.type;
 
                         refs.loginForm.resetFields();
-                        codeButtonStatus.text = "发送验证码"
+                        clearCountDown();
                     });
 
+            //更新按钮状态
+            const updateButtonStatus =((params)=>{
+                codeButtonStatus.status = params.status;
+                codeButtonStatus.text = params.text;
+            });
 
+
+
+            //获取验证码
             const getSms = (() => {
                 if (ruleForm.username == '') {
                     root.$message.error('邮箱不能为空！！');
@@ -206,8 +215,10 @@
                     module: model.value
                 };
 
-                codeButtonStatus.status = true;
-                codeButtonStatus.text = '发送中';
+                updateButtonStatus({
+                    status:true,
+                    text:"发送中"
+                });
 
                 GetSms(requestData).then(response => {
                     let data = response.data;
@@ -238,8 +249,7 @@
                     number--;
                     if (timer.value === 0) {
                         clearInterval(timer.value);
-                        codeButtonStatus.text = '再次发送';
-                        codeButtonStatus.status = false
+                        updateButtonStatus({status:false,text:"再次发送"});
                     } else {
                         codeButtonStatus.text = `倒计时${number}秒`;
                     }
@@ -253,8 +263,7 @@
              */
             const clearCountDown = (() => {
                 //还原验证码按钮默认状态
-                codeButtonStatus.status = false;
-                codeButtonStatus.text = "获取验证码";
+                updateButtonStatus({status:false,text:"获取验证码"});
                 //清除倒计时
                 clearInterval(timer.value)
             });
@@ -281,13 +290,18 @@
             const login = (() => {
                 let requestData = {
                     username: ruleForm.username,
-                    password: ruleForm.password,
+                    password: sha1(ruleForm.password),
                     code: ruleForm.code,
                     module: model.value
                 };
                 Login(requestData).then(response=>{
+                    console.log(response);
+                    console.log("登录成功")
+                    root.$router.path({
+                        name:"Console"
+                    })
                 }).catch(error=>{
-
+                    console.log(error.message())
                 })
             });
             /**
@@ -296,8 +310,7 @@
             const register = (() => {
                 let requestData = {
                     username: ruleForm.username,
-                    password: ruleForm.password,
-                    passwords: ruleForm.passwords,
+                    password: sha1(ruleForm.password),
                     code: ruleForm.code,
                     module: model.value
                 };
